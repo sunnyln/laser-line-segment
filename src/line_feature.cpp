@@ -87,11 +87,11 @@ least LineFeature::leastsquare(int start,int end,int firstfit)
 
 	if(firstfit == 1)
 	{
-		mid1 = 0;
-		mid2 = 0;
-		mid3 = 0;
-		mid4 = 0; 
-		mid5 = 0;
+        mid1 = 0;   // B
+        mid2 = 0;   // D
+        mid3 = 0;   // A
+        mid4 = 0;   //
+        mid5 = 0;   // C
 		int k = 0;
 		for(k = start;k <= end;k++)
 		{
@@ -492,5 +492,62 @@ void LineFeature::extractLines(std::vector<line>& temp_line1,std::vector<gline>&
  	generate(temp_line2);
 	temp_line1 = m_line;
 }
+
+std::vector<float> LineFeature::optimLaserScan(void)
+{
+    std::vector<float> new_range_data(range_data_.ranges.begin(), range_data_.ranges.end());
+
+    for(int line_idx = 0; line_idx < m_line.size(); line_idx++)
+    {
+        int scan_left = m_line[line_idx].left;
+        int scan_right = m_line[line_idx].right;
+        double error1 = 0.0f, error2 = 0.0f;
+        double a = m_line[line_idx].a;
+        double b = m_line[line_idx].b;
+        double c = m_line[line_idx].c;
+
+        for(int scan_idx = scan_left; scan_idx < scan_right; scan_idx++)
+        {
+            //到直线的垂直距离
+
+            error1 = fabs(((a)*range_data_.xs[scan_idx]+(b)*range_data_.ys[scan_idx]+c))/sqrt((1+a*a));
+
+            if(error1 > params_.least_thresh)
+            {
+                continue;
+            }
+
+            //预测位置
+            double kp = 0;
+            POINT m_pn;
+            m_pn.x = 0;
+            m_pn.y = 0;
+            double theta = params_.angle_increment*scan_idx + params_.angle_start;
+            if(fabs((fabs(theta) - PI/2))<1e-05)
+            {
+                m_pn.x = 0;
+                m_pn.y = c;
+            }
+            else
+            {
+                kp = tan(theta);
+                m_pn.x = c/(kp - a);
+                m_pn.y = kp*m_pn.x;
+            }
+
+            //计算到预测点之间的误差
+            error2 = distance_point(range_data_.xs[scan_idx],range_data_.ys[scan_idx],m_pn.x,m_pn.y);
+            if(error2 > params_.predict_distance)
+            {
+                continue;
+            }
+
+            // adjust point
+            new_range_data[scan_idx] = sqrt(m_pn.x*m_pn.x + m_pn.y*m_pn.y);
+        }
+    }
+    return new_range_data;
+}
+
 
 }

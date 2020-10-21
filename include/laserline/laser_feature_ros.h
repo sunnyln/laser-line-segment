@@ -26,6 +26,7 @@ class LaserFeatureROS
 		~LaserFeatureROS();
 		//
 		void startgame();
+
 	private:
 		//memeber function
 		//发布直线分割消息
@@ -57,6 +58,7 @@ class LaserFeatureROS
   		ros::Subscriber scan_subscriber_;
   		ros::Publisher line_publisher_;
   		ros::Publisher marker_publisher_;
+                ros::Publisher optim_scan_publisher_;
 };
 
 }

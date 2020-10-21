@@ -16,7 +16,10 @@ LaserFeatureROS::LaserFeatureROS(ros::NodeHandle& nh, ros::NodeHandle& nh_local)
 	{
 		marker_publisher_ = nh_.advertise<visualization_msgs::Marker>("publish_line_markers", 1);
 	}
-	ros::spin();
+
+    optim_scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>("scan_filtered", 1);
+
+    ros::spin();
 }
 
 LaserFeatureROS::~LaserFeatureROS()
@@ -61,6 +64,23 @@ void LaserFeatureROS::scanValues(const sensor_msgs::LaserScan::ConstPtr &scan_ms
 	line_feature_.setRangeData(scan_ranges_doubles);
 
 	startgame();
+
+    std::vector<float> optim_range_data = line_feature_.optimLaserScan();
+    sensor_msgs::LaserScan optim_scan_msg;
+    optim_scan_msg.header = scan_msg->header;
+    optim_scan_msg.angle_min = scan_msg->angle_min;
+    optim_scan_msg.angle_max = scan_msg->angle_max;
+    optim_scan_msg.angle_increment = scan_msg->angle_increment;
+    optim_scan_msg.time_increment = scan_msg->time_increment;
+    optim_scan_msg.scan_time = scan_msg->scan_time;
+    optim_scan_msg.intensities = scan_msg->intensities;
+    optim_scan_msg.range_min = scan_msg->range_min;
+    optim_scan_msg.range_max = scan_msg->range_max;
+    optim_scan_msg.ranges = optim_range_data;
+
+    optim_scan_publisher_.publish(optim_scan_msg);
+
+
 }
 
 void LaserFeatureROS::publishMarkerMsg(const std::vector<gline> &m_gline,visualization_msgs::Marker &marker_msg)
@@ -68,7 +88,7 @@ void LaserFeatureROS::publishMarkerMsg(const std::vector<gline> &m_gline,visuali
 	marker_msg.ns = "line_extraction";
 	marker_msg.id = 0;
 	marker_msg.type = visualization_msgs::Marker::LINE_LIST;
-	marker_msg.scale.x = 0.1;
+    marker_msg.scale.x = 0.02;
 	marker_msg.color.r = 1.0;
 	marker_msg.color.g = 0.0;
 	marker_msg.color.b = 0.0;
@@ -88,7 +108,7 @@ void LaserFeatureROS::publishMarkerMsg(const std::vector<gline> &m_gline,visuali
 	    p_end.z = 0;
 	    marker_msg.points.push_back(p_end);
 	}
-	marker_msg.header.frame_id = "laser";
+    marker_msg.header.frame_id = frame_id_;
 	marker_msg.header.stamp = ros::Time::now();
 }
 
@@ -118,11 +138,11 @@ void LaserFeatureROS::load_params()
 	std::string frame_id, scan_topic;
 	bool show_lines;
 
-	nh_local_.param<std::string>("frame_id", frame_id, "laser");
+    nh_local_.param<std::string>("frame_id", frame_id, "laser_scanner_link_head");
 	frame_id_ = frame_id;
 	ROS_DEBUG("frame_id: %s", frame_id_.c_str());
 
-	nh_local_.param<std::string>("scan_topic", scan_topic, "scan");
+    nh_local_.param<std::string>("scan_topic", scan_topic, "scan_head");
 	scan_topic_ = scan_topic;
 	ROS_DEBUG("scan_topic: %s", scan_topic_.c_str());
 
@@ -136,11 +156,11 @@ void LaserFeatureROS::load_params()
 	int min_line_points,seed_line_points;
 	double least_thresh,min_line_length,predict_distance;
 
-	nh_local_.param<double>("least_thresh", least_thresh, 0.04);
+    nh_local_.param<double>("least_thresh", least_thresh, 0.03);
 	line_feature_.set_least_threshold(least_thresh);
 	ROS_DEBUG("least_thresh: %lf", least_thresh);
 
-	nh_local_.param<double>("min_line_length", min_line_length, 0.5);
+    nh_local_.param<double>("min_line_length", min_line_length, 0.4);
 	line_feature_.set_min_line_length(min_line_length);
 	ROS_DEBUG("min_line_length: %lf", min_line_length);
   
@@ -152,7 +172,7 @@ void LaserFeatureROS::load_params()
 	line_feature_.set_seed_line_points(seed_line_points);
 	ROS_DEBUG("seed_line_points: %d", seed_line_points);
 
-  	nh_local_.param<int>("min_line_points", min_line_points, 12);
+    nh_local_.param<int>("min_line_points", min_line_points, 15);
   	line_feature_.set_min_line_points(min_line_points);
   	ROS_DEBUG("min_line_points: %d", min_line_points);
 

@@ -37,6 +37,10 @@ class LineFeature
 		void setRangeData(const std::vector<double>&); 
 		//返回直线分割结果
 		void extractLines(std::vector<line>&,std::vector<gline>&);
+
+                //
+                std::vector<float> optimLaserScan(void);
+
 		//设置参数
 		void set_angle_increment(double);
 		void set_angle_start(double);
@@ -71,7 +75,7 @@ class LineFeature
 		std::vector<line> m_line;
 		//直线拟合中间传递变量，已设为全局变量
 		least m_least;
-        //拟合中间变量
+                //拟合中间变量
 		double mid1;
 		double mid2;
 		double mid3;
